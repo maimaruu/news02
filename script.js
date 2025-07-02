@@ -8,9 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let idfScores = {};
     const stopWords = new Set(['の', 'に', 'は', 'を', 'た', 'が', 'で', 'て', 'と', 'し', 'れ', 'さ', 'ある', 'いる', 'も', 'する', 'から', 'な', 'こと', 'もの', 'ため', 'れる', 'なり', 'など', 'つい', 'これ', 'それ', 'あれ', 'ない', 'ので', 'なる', 'という']);
 
-    // カテゴリ定義
+    // カテゴリ定義 (データ例に合わせて修正)
     const subcategories = {
-        "エンタメ": ["エンタメ総合", "音楽", "映画", "ゲーム", "アジア・韓流"], "ライフ": ["ライフ総合", "ヘルス", "環境", "文化・アート"], "地域": ["北海道・東北", "関東", "信越・北陸", "東海", "近畿", "中国", "四国", "九州・沖縄"], "スポーツ": ["スポーツ総合", "野球", "サッカー", "モータースポーツ", "競馬", "ゴルフ", "格闘技"], "国内": ["政治", "社会", "人"], "国際": ["国際総合", "中国・台湾", "韓国・北朝鮮", "アジア・オセアニア", "北米", "中南米", "ヨーロッパ", "中東・アフリカ"], "経済": ["経済総合", "市況", "株式", "産業"], "IT": [], "科学": []
+        "エンタメ": ["エンタメ総合", "音楽", "映画", "ゲーム", "アジア・韓流"],
+        "ライフ": ["ライフ総合", "ヘルス", "環境", "文化・アート"],
+        "地域": ["北海道・東北", "関東", "信越・北陸", "東海", "近畿", "中国", "四国", "九州・沖縄"],
+        "スポーツ": ["スポーツ総合", "野球", "サッカー", "モータースポーツ", "競馬", "ゴルフ", "格闘技"],
+        "国内": ["国内総合", "政治", "社会", "人"], // ★ 記事データに合わせて「国内総合」と「社会」を追加
+        "国際": ["国際総合", "中国・台湾", "韓国・北朝鮮", "アジア・オセアニア", "北米", "中南米", "ヨーロッパ", "中東・アフリカ"],
+        "経済": ["経済総合", "市況", "株式", "産業"],
+        "IT": [],
+        "科学": []
     };
 
     // --- DOM要素取得 ---
@@ -66,15 +74,48 @@ document.addEventListener('DOMContentLoaded', () => {
             showAiSummaryButton.disabled = true;
         }
     }
+    
+    // ★ 修正: updateArticleDisplay関数
     function updateArticleDisplay() {
-        const activeCategory = document.querySelector('.category-button.active').dataset.category;
-        const activeSubcategoryBtn = document.querySelector('.subcategory-button.active');
+        const activeCategoryButton = document.querySelector('.category-button.active');
+        const activeCategory = activeCategoryButton ? activeCategoryButton.dataset.category : 'すべて'; // デフォルト値を設定
+        
+        const activeSubcategoryButton = document.querySelector('.subcategory-button.active');
+        const activeSubcategory = activeSubcategoryButton ? activeSubcategoryButton.dataset.subcategory : null;
+        
         const keyword = searchKeywordInput.value.toLowerCase().trim();
         let filtered = allArticles;
+
         if (activeCategory !== 'すべて') {
-            const categoryPrefix = activeSubcategoryBtn ? `${activeCategory}/${activeSubcategoryBtn.dataset.subcategory}` : activeCategory;
-            filtered = allArticles.filter(a => a.category.startsWith(categoryPrefix));
+            filtered = allArticles.filter(article => {
+                const parts = article.category.split('/');
+                const articleMainCategory = parts[0];
+                const articleSubCategory = parts[1] || (parts[0].endsWith('総合') ? parts[0] : null); // 「エンタメ総合」などの場合はそのままサブカテゴリとみなす
+                
+                // 大カテゴリでフィルタリング
+                if (articleMainCategory !== activeCategory) {
+                    return false;
+                }
+
+                // サブカテゴリが選択されている場合
+                if (activeSubcategory) {
+                    // もし記事のカテゴリが「大カテゴリ/小カテゴリ」形式なら小カテゴリ部分を比較
+                    // そうでなく、「エンタメ総合」のように単一のカテゴリ名で、それが選択されたサブカテゴリ名と同じならOK
+                    if (articleSubCategory) {
+                        return articleSubCategory === activeSubcategory;
+                    } else if (articleMainCategory === activeSubcategory) { // 「エンタメ総合」が選択されたサブカテゴリ名と一致する場合
+                        return true;
+                    }
+                    return false; // サブカテゴリが選択されているが、記事に該当するサブカテゴリがない場合
+                }
+                
+                // サブカテゴリが選択されていない場合（大カテゴリのみ選択）
+                // 大カテゴリに属するすべての記事を含める
+                return true;
+            });
         }
+        
+        // キーワードフィルタリング
         if (keyword) {
             filtered = filtered.filter(a => a.title.toLowerCase().includes(keyword) || a.body.toLowerCase().includes(keyword));
         }
@@ -82,22 +123,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const articleToDisplay = findClosestArticle();
         displayArticle(articleToDisplay);
     }
+
+    // ★ 修正: updateSubcategoriesUI関数
     function updateSubcategoriesUI() {
-        const category = document.querySelector('.category-button.active').dataset.category;
-        subcategoryContainer.innerHTML = '';
-        const subList = subcategories[category];
+        const categoryButton = document.querySelector('.category-button.active');
+        const category = categoryButton ? categoryButton.dataset.category : null;
+
+        subcategoryContainer.innerHTML = ''; // サブカテゴリボタンをクリア
+
+        if (!category || category === 'すべて') {
+            // 「すべて」が選択されている場合やカテゴリが選択されていない場合はサブカテゴリを表示しない
+            return;
+        }
+
+        const subList = subcategories[category]; // 選択された大カテゴリのサブカテゴリリスト
+
         if (subList && subList.length > 0) {
-            const availableSubs = new Set(allArticles.filter(a => a.category.startsWith(category + '/')).map(a => a.category.split('/')[1]));
+            // その大カテゴリに属する記事が実際に持っているサブカテゴリのセット
+            const actualSubcategoriesInArticles = new Set();
+            allArticles.forEach(article => {
+                const parts = article.category.split('/');
+                const articleMainCategory = parts[0];
+                const articleSubCategory = parts[1] || (parts[0].endsWith('総合') ? parts[0] : null);
+
+                if (articleMainCategory === category && articleSubCategory) {
+                    actualSubcategoriesInArticles.add(articleSubCategory);
+                }
+            });
+
             subList.forEach(sub => {
                 const button = document.createElement('button');
                 button.textContent = sub;
                 button.className = 'subcategory-button';
                 button.dataset.subcategory = sub;
-                if (!availableSubs.has(sub)) button.disabled = true;
+                
+                // サブカテゴリが実際に記事データに存在するかで disabled を判定
+                // ただし、「〇〇総合」のようなものは、メインカテゴリと同じ扱いにしないとボタンがdisabledになる
+                if (!actualSubcategoriesInArticles.has(sub) && !sub.endsWith('総合')) {
+                    // 「〇〇総合」でないサブカテゴリが記事データに存在しない場合のみdisabled
+                    button.disabled = true;
+                }
+                 // 「〇〇総合」ボタンは常に有効にするか、別途判定
+                 // 例: その大カテゴリの記事が1つでもあれば有効にする
+                if (sub.endsWith('総合')) {
+                    const hasGeneralArticles = allArticles.some(a => a.category === sub);
+                    if (!hasGeneralArticles) {
+                        button.disabled = true; // 「国内総合」の記事がなければ無効化
+                    }
+                }
+
+
                 subcategoryContainer.appendChild(button);
             });
+            
+            // 初回ロード時やカテゴリ切り替え時に、サブカテゴリの最初のボタンをアクティブにする
+            // または、すでにアクティブなサブカテゴリがあればそれを保持
+            const firstActiveSubButton = subcategoryContainer.querySelector('.subcategory-button:not(:disabled)');
+            if (firstActiveSubButton) {
+                firstActiveSubButton.classList.add('active');
+            }
         }
     }
+
 
     // --- イベントリスナー設定 ---
     Object.values(mainSliders).forEach(slider => {
@@ -107,48 +194,93 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         slider.addEventListener('change', updateArticleDisplay);
     });
+
+    // ★ 修正: カテゴリタブのクリックイベントリスナー
     categoryTabs.addEventListener('click', e => {
         if (e.target.tagName === 'BUTTON') {
-            document.querySelector('.category-button.active').classList.remove('active');
+            const currentActiveCategoryButton = document.querySelector('.category-button.active');
+            if (currentActiveCategoryButton) {
+                currentActiveCategoryButton.classList.remove('active');
+            }
             e.target.classList.add('active');
-            updateSubcategoriesUI();
-            updateArticleDisplay();
+            
+            // サブカテゴリボタンのアクティブ状態をリセット
+            const currentActiveSubcategoryButton = subcategoryContainer.querySelector('.subcategory-button.active');
+            if (currentActiveSubcategoryButton) {
+                currentActiveSubcategoryButton.classList.remove('active');
+            }
+
+            updateSubcategoriesUI(); // サブカテゴリUIを更新
+            updateArticleDisplay();   // 記事表示を更新
         }
     });
+
+    // ★ 修正: サブカテゴリタブのクリックイベントリスナー
     subcategoryContainer.addEventListener('click', e => {
         if (e.target.tagName === 'BUTTON' && !e.target.disabled) {
-            const currentActive = subcategoryContainer.querySelector('.active');
-            if (currentActive) currentActive.classList.remove('active');
-            if (currentActive !== e.target) { e.target.classList.add('active'); }
-            updateArticleDisplay();
+            const currentActiveSubcategoryButton = subcategoryContainer.querySelector('.subcategory-button.active');
+            if (currentActiveSubcategoryButton) {
+                currentActiveSubcategoryButton.classList.remove('active');
+            }
+            e.target.classList.add('active');
+            updateArticleDisplay(); // 記事表示を更新
         }
     });
+
+
     searchButton.addEventListener('click', updateArticleDisplay);
     searchKeywordInput.addEventListener('keyup', e => { if (e.key === 'Enter') updateArticleDisplay(); });
 
     showMappingButton.addEventListener('click', () => {
         const plotElement = document.getElementById('plot-container');
         const modalContent = plotElement.parentElement;
-        const mappingWrapper = document.createElement('div');
-        mappingWrapper.className = 'mapping-wrapper';
-        mappingWrapper.style.display = 'flex';
-        mappingWrapper.style.width = '100%';
-        mappingWrapper.style.height = '100%';
-        const modalArticleView = document.createElement('div');
-        modalArticleView.className = 'modal-article-view';
-        plotElement.style.flex = '1 1 50%';
-        modalArticleView.style.flex = '1 1 50%';
-        modalArticleView.style.overflowY = 'auto';
-        modalArticleView.style.padding = '0 20px';
-        modalArticleView.style.boxSizing = 'border-box';
-        modalArticleView.style.backgroundColor = '#fff';
-        mappingWrapper.appendChild(plotElement);
-        mappingWrapper.appendChild(modalArticleView);
-        modalContent.appendChild(mappingWrapper);
-        modalArticleView.innerHTML = `<div id="modal-article-content"><h2 id="modal-article-title" style="margin-top:20px;"></h2><p id="modal-article-source"></p><p id="modal-article-published-at"></p><p id="modal-article-category"></p><hr><div id="modal-article-body"></div><a id="modal-article-url" href="#" target="_blank">記事を読む</a></div><p id="modal-article-placeholder" style="margin-top:20px;">マップ上の点をクリックすると、ここに記事が表示されます。</p>`;
-        function displayArticleInModal(article) { if (article) { document.getElementById('modal-article-title').textContent = article.title; document.getElementById('modal-article-source').textContent = `出展: ${article.source}`; document.getElementById('modal-article-published-at').textContent = `公開日時: ${article.published_at}`; document.getElementById('modal-article-category').textContent = `カテゴリ: ${article.category}`; document.getElementById('modal-article-body').textContent = article.body; document.getElementById('modal-article-url').href = article.url; document.getElementById('modal-article-content').style.display = 'block'; document.getElementById('modal-article-placeholder').style.display = 'none'; } }
+        // mapping-wrapperが既に存在しないことを確認してから作成
+        let mappingWrapper = modalContent.querySelector('.mapping-wrapper');
+        let modalArticleView = modalContent.querySelector('.modal-article-view');
+
+        if (!mappingWrapper) {
+            mappingWrapper = document.createElement('div');
+            mappingWrapper.className = 'mapping-wrapper';
+            mappingWrapper.style.display = 'flex';
+            mappingWrapper.style.width = '100%';
+            mappingWrapper.style.height = '100%';
+
+            modalArticleView = document.createElement('div');
+            modalArticleView.className = 'modal-article-view';
+            plotElement.style.flex = '1 1 50%';
+            modalArticleView.style.flex = '1 1 50%';
+            modalArticleView.style.overflowY = 'auto';
+            modalArticleView.style.padding = '0 20px';
+            modalArticleView.style.boxSizing = 'border-box';
+            modalArticleView.style.backgroundColor = '#fff';
+
+            // plotElementをmodalContentから一時的に切り離し、wrapperに追加
+            const originalPlotParent = plotElement.parentElement;
+            mappingWrapper.appendChild(plotElement);
+            mappingWrapper.appendChild(modalArticleView);
+            modalContent.appendChild(mappingWrapper);
+
+            // modal-article-viewの中身を初期化
+            modalArticleView.innerHTML = `<div id="modal-article-content"><h2 id="modal-article-title" style="margin-top:20px;"></h2><p id="modal-article-source"></p><p id="modal-article-published-at"></p><p id="modal-article-category"></p><hr><div id="modal-article-body"></div><a id="modal-article-url" href="#" target="_blank">記事を読む</a></div><p id="modal-article-placeholder" style="margin-top:20px;">マップ上の点をクリックすると、ここに記事が表示されます。</p>`;
+        }
+        
+        // 関数内関数をトップレベルに移動し、必要に応じて引数を渡す
+        function displayArticleInModal(article) {
+            if (article) {
+                document.getElementById('modal-article-title').textContent = article.title;
+                document.getElementById('modal-article-source').textContent = `出展: ${article.source}`;
+                document.getElementById('modal-article-published-at').textContent = `公開日時: ${article.published_at}`;
+                document.getElementById('modal-article-category').textContent = `カテゴリ: ${article.category}`;
+                document.getElementById('modal-article-body').textContent = article.body;
+                document.getElementById('modal-article-url').href = article.url;
+                document.getElementById('modal-article-content').style.display = 'block';
+                document.getElementById('modal-article-placeholder').style.display = 'none';
+            }
+        }
+        
         document.getElementById('modal-article-content').style.display = 'none';
         document.getElementById('modal-article-placeholder').style.display = 'block';
+
         if (currentArticles.length > 0) {
             const trace = { x: currentArticles.map(a => a.topic_score), y: currentArticles.map(a => a.focus_score), z: currentArticles.map(a => a.style_score), mode: 'markers', type: 'scatter3d', text: currentArticles.map(a => a.title), marker: { size: 5, color: currentArticles.map(a => a.topic_score), colorscale: 'Viridis', opacity: 0.8, colorbar: { title: 'Topic' } } };
             const layout = { title: { text: `記事マッピング (${currentArticles.length}件)`, font: { size: 14 } }, scene: { xaxis: { title: 'Topic' }, yaxis: { title: 'Focus' }, zaxis: { title: 'Style' } }, margin: { l: 0, r: 0, b: 0, t: 40 } };
@@ -231,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wordcloudModal.style.display = 'block';
     });
 
-    // AI要約ボタンのイベントリスナーをここに移動
+    // AI要約ボタンのイベントリスナーを正しい位置に配置
     showAiSummaryButton.addEventListener('click', () => {
         if (!selectedArticle) {
             alert("記事が選択されていません。記事を選択してから再度お試しください。");
@@ -341,8 +473,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             console.log("IDF scores calculated."); // 成功ログ
 
+            // アプリケーション初期化時にUIを更新
             updateSubcategoriesUI();
-            updateArticleDisplay(); // 初期表示時にもtoFixed(1)が適用される
+            updateArticleDisplay();
 
         } catch (err) {
             console.error("アプリの初期化に失敗しました:", err);
