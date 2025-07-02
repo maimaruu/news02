@@ -101,7 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- イベントリスナー設定 ---
     Object.values(mainSliders).forEach(slider => {
-        slider.addEventListener('input', () => { Object.keys(sliderValues).forEach(key => sliderValues[key].textContent = mainSliders[key].value); });
+        slider.addEventListener('input', () => {
+            // メインスライダーの値表示も小数点以下1桁に固定
+            Object.keys(sliderValues).forEach(key => sliderValues[key].textContent = parseFloat(mainSliders[key].value).toFixed(1));
+        });
         slider.addEventListener('change', updateArticleDisplay);
     });
     categoryTabs.addEventListener('click', e => {
@@ -154,78 +157,105 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { plotElement.innerHTML = '<p>表示できる記事がありません。</p>'; }
         mappingModal.style.display = 'block';
     });
-    
-    // ★★★ この関数全体をコピーして置き換えてください ★★★
-showWordcloudButton.addEventListener('click', () => {
-    if (!selectedArticle || !tokenizer) {
-        alert("単語データが準備できていません。少々お待ちください。");
-        return;
-    }
 
-    const tokens = tokenizer.tokenize(selectedArticle.body);
-    const termFreq = {};
-    let totalTermsInDoc = 0;
-    
-    tokens.forEach(token => {
-        if (token.pos === '名詞' || token.pos === '動詞' || token.pos === '形容詞') {
-            const word = token.basic_form;
-            if (word.length > 1 && !stopWords.has(word) && isNaN(word)) {
-                termFreq[word] = (termFreq[word] || 0) + 1;
-                totalTermsInDoc++;
+
+    showWordcloudButton.addEventListener('click', () => {
+        if (!selectedArticle || !tokenizer) {
+            alert("単語データが準備できていません。少々お待ちください。");
+            return;
+        }
+
+        const tokens = tokenizer.tokenize(selectedArticle.body);
+        const termFreq = {};
+        let totalTermsInDoc = 0;
+
+        tokens.forEach(token => {
+            if (token.pos === '名詞' || token.pos === '動詞' || token.pos === '形容詞') {
+                const word = token.basic_form;
+                if (word.length > 1 && !stopWords.has(word) && isNaN(word)) {
+                    termFreq[word] = (termFreq[word] || 0) + 1;
+                    totalTermsInDoc++;
+                }
+            }
+        });
+
+        if (totalTermsInDoc === 0) {
+            alert("ワードクラウドに表示できる有効な単語が見つかりませんでした。");
+            return;
+        }
+
+        const tfidfList = [];
+        for (const word in termFreq) {
+            const tf = termFreq[word] / totalTermsInDoc;
+            // IDFスコアの存在を確認し、デフォルト値（0または非常に小さい値）を設定
+            const idf = idfScores[word] !== undefined ? idfScores[word] : 0;
+            const tfidf = tf * idf;
+            if (tfidf > 0) {
+                // tfidf値を適度なスケールに調整 (例: 10000倍)
+                tfidfList.push([word, tfidf * 10000]);
             }
         }
+
+        tfidfList.sort((a, b) => b[1] - a[1]);
+        const topWords = tfidfList.slice(0, 100);
+
+        if (topWords.length === 0) {
+            alert("ワードクラウドに表示できる有効な単語が見つかりませんでした。");
+            return;
+        }
+
+        const wordcloudContainer = document.getElementById('wordcloud-container');
+
+        let wordcloudCanvas = document.getElementById('wordcloud-canvas');
+        if (!wordcloudCanvas) {
+            wordcloudCanvas = document.createElement('canvas');
+            wordcloudCanvas.id = 'wordcloud-canvas';
+            wordcloudContainer.appendChild(wordcloudCanvas);
+        }
+
+        // Canvasのサイズを固定値に設定する
+        wordcloudCanvas.width = 500;
+        wordcloudCanvas.height = 500;
+
+        // ワードクラウドを描画
+        WordCloud(wordcloudCanvas, {
+            list: topWords,
+            // weightFactorは単語のサイズに影響します。調整が必要な場合もあります。
+            shrinkToFit: true,
+            clearCanvas: true,
+            minRotation: 0,
+            maxRotation: 0,
+        });
+
+        // モーダルを表示
+        wordcloudModal.style.display = 'block';
     });
 
-    if (totalTermsInDoc === 0) {
-        alert("ワードクラウドに表示できる有効な単語が見つかりませんでした。");
-        return;
-    }
-
-    const tfidfList = [];
-    for (const word in termFreq) {
-        const tf = termFreq[word] / totalTermsInDoc;
-        const idf = idfScores[word] || 0;
-        const tfidf = tf * idf;
-        if (tfidf > 0) {
-            tfidfList.push([word, tfidf * 20000]); 
-        }
-    }
-
-    tfidfList.sort((a, b) => b[1] - a[1]);
-    const topWords = tfidfList.slice(0, 100);
-
-    if (topWords.length === 0) {
-        alert("ワードクラウドに表示できる有効な単語が見つかりませんでした。");
-        return;
-    }
-
-    const wordcloudContainer = document.getElementById('wordcloud-container');
-    
-    // 修正点：コンテナの中身を完全に空にする
-    wordcloudContainer.innerHTML = ''; 
-    
-    // 新しいCanvas要素を毎回作成する
-    const newCanvas = document.createElement('canvas');
-    newCanvas.width = 500;
-    newCanvas.height = 500;
-    wordcloudContainer.appendChild(newCanvas);
-
-    // 新しく作ったCanvasにワードクラウドを描画
-    WordCloud(newCanvas, { list: topWords, weightFactor: 1, shrinkToFit: true });
-    
-    // モーダルを表示
-    wordcloudModal.style.display = 'block';
-});
-
+    // AI要約ボタンのイベントリスナーをここに移動
     showAiSummaryButton.addEventListener('click', () => {
-        if (!selectedArticle) return;
-        Object.keys(aiSummarySliders).forEach(key => { aiSummarySliders[key].value = mainSliders[key].value; aiSliderValues[key].textContent = mainSliders[key].value; });
+        if (!selectedArticle) {
+            alert("記事が選択されていません。記事を選択してから再度お試しください。");
+            return;
+        }
+        // メインのスライダー値をAI要約スライダーにコピー
+        Object.keys(aiSummarySliders).forEach(key => {
+            aiSummarySliders[key].value = mainSliders[key].value;
+            // AI要約スライダーの値表示も小数点以下1桁に固定
+            aiSliderValues[key].textContent = parseFloat(mainSliders[key].value).toFixed(1);
+        });
+        // AI要約を更新
         updateAiSummary();
+        // モーダルを表示
         aiSummaryModal.style.display = 'block';
     });
+
     function updateAiSummary() {
         if (!selectedArticle) return;
-        const target = { topic: parseFloat(aiSummarySliders.topic.value), focus: parseFloat(aiSummarySliders.focus.value), style: parseFloat(aiSummarySliders.style.value) };
+        const target = {
+            topic: parseFloat(aiSummarySliders.topic.value),
+            focus: parseFloat(aiSummarySliders.focus.value),
+            style: parseFloat(aiSummarySliders.style.value)
+        };
         let closestKey = '', minDistance = Infinity;
         for (const key in selectedArticle.summaries) {
             const [topic, focus, style] = key.split(',').map(Number);
@@ -234,8 +264,14 @@ showWordcloudButton.addEventListener('click', () => {
         }
         aiSummaryOutput.textContent = selectedArticle.summaries[closestKey] || '要約が見つかりません。';
     }
+
     Object.values(aiSummarySliders).forEach(slider => {
-        slider.addEventListener('input', (e) => { const key = e.target.id.split('-')[1]; aiSliderValues[key].textContent = e.target.value; updateAiSummary(); });
+        slider.addEventListener('input', (e) => {
+            const key = e.target.id.split('-')[1];
+            // AI要約スライダーの値表示を小数点以下1桁に固定
+            aiSliderValues[key].textContent = parseFloat(e.target.value).toFixed(1);
+            updateAiSummary();
+        });
     });
 
     function cleanupMappingModal() {
@@ -263,7 +299,7 @@ showWordcloudButton.addEventListener('click', () => {
             if (e.target.id === 'mapping-modal') { cleanupMappingModal(); }
         }
     });
-    
+
     async function initializeApp() {
         const loadingOverlay = document.createElement('div');
         loadingOverlay.id = 'loading-overlay';
@@ -299,14 +335,14 @@ showWordcloudButton.addEventListener('click', () => {
                     docFreq[word] = (docFreq[word] || 0) + 1;
                 });
             }
-            
+
             for (const word in docFreq) {
                 idfScores[word] = Math.log(totalDocs / docFreq[word]);
             }
             console.log("IDF scores calculated."); // 成功ログ
-            
+
             updateSubcategoriesUI();
-            updateArticleDisplay();
+            updateArticleDisplay(); // 初期表示時にもtoFixed(1)が適用される
 
         } catch (err) {
             console.error("アプリの初期化に失敗しました:", err);

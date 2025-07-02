@@ -214,4 +214,51 @@ body {
     min-height: 100px;
     white-space: pre-wrap;
 }
-/* --- ★★★ ここまで追加 ★★★ --- */
+
+/* ★★★ ここから追加されたCSS ★★★ */
+/* スライダーの数値表示領域の固定とフォント調整 */
+#ai-topic-value,
+#ai-focus-value,
+#ai-style-value,
+#topic-value, /* メインスライダーの数値表示も対象 */
+#focus-value, /* メインスライダーの数値表示も対象 */
+#style-value { /* メインスライダーの数値表示も対象 */
+    display: inline-block; /* width/min-widthが効くように */
+    min-width: 2.2em; /* '8.8' などの最大表示桁数に合わせて調整。フォントサイズに依存 */
+    text-align: right; /* 数値を右寄せにして、左端を固定 */
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace; /* 等幅フォントで文字幅を均一に */
+}
+
+/* AI要約モーダル内のスライダーグループにのみ適用 */
+#ai-summary-modal .slider-group {
+    flex-wrap: nowrap; /* 強制的に改行させない */
+    justify-content: space-between; /* 両端揃えにして、スペースを均等に配分 */
+    gap: 5px; /* またはこれ以上 */
+}
+
+#ai-summary-modal .slider-group label {
+    min-width: auto; /* ラベルの最小幅を自動に */
+    width: 90px; /* ある程度の固定幅を与える。調整が必要 */
+    text-align: right; /* 数値部分と揃える */
+    /* 必要に応じてフォントサイズを少し小さくする */
+    /* font-size: 0.9em; */
+}
+
+#ai-summary-modal .slider-group .slider {
+    flex-grow: 1; /* 残りのスペースをスライダーに割り当てる */
+}
+
+/* 数値表示の幅調整は既に適用済みですが、念のため再確認 */
+#ai-topic-value,
+#ai-focus-value,
+#ai-style-value {
+    display: inline-block;
+    min-width: 2.2em; /* 例: "8.8" を含む幅 */
+    text-align: right;
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+}
+
+/* モーダルのコンテンツ自体の最大幅を広げることも検討 */
+.modal-content {
+    max-width: 900px; /* 700pxから広げる。コンテンツ量に応じて */
+}
