@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ニュース可視化ツール</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>ニュース記事の可視化</h1>
+        <div class="search-container">
+            <input type="text" id="search-keyword" placeholder="記事を検索するキーワードを入力">
+            <button id="search-button">検索</button>
+        </div>
+        <div class="controls-container">
+            <p>スライダーを動かして、読みたい記事の特性を調整してください</p>
+            <div class="slider-group">
+                <label for="topic-slider">トピック: <span id="topic-value">4</span></label>
+                <input type="range" id="topic-slider" class="slider" min="0" max="8" step="1" value="4">
+            </div>
+            <div class="slider-group">
+                <label for="focus-slider">フォーカス: <span id="focus-value">2</span></label>
+                <input type="range" id="focus-slider" class="slider" min="0" max="4" step="1" value="2">
+            </div>
+            <div class="slider-group">
+                <label for="style-slider">スタイル: <span id="style-value">2</span></label>
+                <input type="range" id="style-slider" class="slider" min="0" max="4" step="1" value="2">
+            </div>
+        </div>
+    </div>
+
+    <div class="category-tabs-container">
+        <div class="category-tabs">
+            <button class="category-button active" data-category="すべて">すべて</button>
+            <button class="category-button" data-category="エンタメ">エンタメ</button>
+            <button class="category-button" data-category="ライフ">ライフ</button>
+            <button class="category-button" data-category="地域">地域</button>
+            <button class="category-button" data-category="スポーツ">スポーツ</button>
+            <button class="category-button" data-category="国内">国内</button>
+            <button class="category-button" data-category="国際">国際</button>
+            <button class="category-button" data-category="経済">経済</button>
+            <button class="category-button" data-category="IT">IT</button>
+            <button class="category-button" data-category="科学">科学</button>
+        </div>
+        <div id="subcategory-tabs" class="subcategory-tabs"></div>
+    </div>
+
+    <div class="article-actions">
+        <button id="show-mapping-button">記事全体マッピング</button>
+        <button id="show-wordcloud-button" disabled>ワードクラウド</button>
+        <button id="show-ai-summary-button" disabled>AI要約</button>
+    </div>
+
+    <div class="main-container">
+        <div id="article-container" class="article-container">
+            <div id="article-placeholder">
+                <p>上記のスライダーやカテゴリを操作して記事を検索してください。</p>
+            </div>
+            <div id="article-content" class="hidden">
+                <h2 id="article-title"></h2>
+                <div class="article-meta">
+                    <span id="article-source"></span> | <span id="article-published-at"></span> | <span id="article-category"></span>
+                </div>
+                <div id="article-body"></div>
+                <a id="article-url" href="#" target="_blank">元の記事を読む</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="mapping-modal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close-button">&times;</span>
+            <h2>記事全体マッピング</h2>
+            <div id="plot-container"></div>
+        </div>
+    </div>
+
+    <div id="wordcloud-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>ワードクラウド</h2>
+        <div id="wordcloud-container">
+            </div>
+    </div>
+</div>
+
+    <div id="ai-summary-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>AI要約ジェネレーター</h2>
+            <div class="summary-controls">
+                <p>スライダーを調整して、最適な要約を生成してください。</p>
+                <label for="ai-topic-slider">トピック: <span id="ai-topic-value">4</span></label>
+                <input type="range" id="ai-topic-slider" min="0" max="8" step="1" value="4">
+                <label for="ai-focus-slider">フォーカス: <span id="ai-focus-value">2</span></label>
+                <input type="range" id="ai-focus-slider" min="0" max="4" step="1" value="2">
+                <label for="ai-style-slider">スタイル: <span id="ai-style-value">2</span></label>
+                <input type="range" id="ai-style-slider" min="0" max="4" step="1" value="2">
+            </div>
+            <div id="ai-summary-output"></div>
+        </div>
+    </div>
+    <script src="generated_articles_data_with_summaries.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

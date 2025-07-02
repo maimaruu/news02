@@ -1,0 +1,217 @@
+/* --- 基本設定 --- */
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* --- ヘッダーとコントロール --- */
+.header {
+    width: 100%;
+    background-color: #fff;
+    padding: 20px;
+    box-sizing: border-box;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+.header h1 { margin-top: 0; }
+.search-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+#search-keyword {
+    width: 60%;
+    max-width: 400px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+#search-button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+#search-button:hover { background-color: #0056b3; }
+.controls-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.slider-group {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.slider-group label { min-width: 130px; text-align: left; }
+.slider { width: 100%; }
+
+/* --- カテゴリタブ --- */
+.category-tabs-container {
+    width: 100%;
+    padding: 15px 0;
+    background-color: #f8f9fa;
+}
+.category-tabs, .subcategory-tabs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.subcategory-tabs { margin-top: 10px; min-height: 28px; }
+
+.category-button, .subcategory-button {
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid #ccc;
+    background-color: #fff;
+}
+.category-button.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+.subcategory-button {
+    padding: 5px 12px;
+    font-size: 0.9em;
+    border-color: #007bff;
+    background-color: #e7f3ff;
+    color: #007bff;
+}
+.subcategory-button.active {
+    background-color: #0056b3;
+    color: #fff;
+}
+.subcategory-button:disabled {
+    background-color: #e9ecef;
+    color: #adb5bd;
+    border-color: #ced4da;
+    cursor: not-allowed;
+}
+
+/* --- 機能ボタンエリア --- */
+.article-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px 0;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+    box-sizing: border-box;
+}
+.article-actions button {
+    padding: 10px 15px;
+    border: 1px solid #007bff;
+    background-color: #fff;
+    color: #007bff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.article-actions button:hover:not(:disabled) {
+    background-color: #007bff;
+    color: #fff;
+}
+.article-actions button:disabled {
+    border-color: #ccc;
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+
+/* --- メインコンテンツ --- */
+.main-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto 20px auto; 
+    padding: 20px;
+}
+.article-container {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+#article-placeholder { text-align: center; color: #888; }
+.hidden { display: none; }
+#article-title { margin-top: 0; }
+.article-meta {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 20px;
+}
+#article-body {
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin-bottom: 20px;
+}
+#article-url {
+    color: #007bff;
+    text-decoration: none;
+}
+#article-url:hover { text-decoration: underline; }
+
+
+/* --- ★★★ ここから追加 ★★★ --- */
+/* --- モーダル共通 --- */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+}
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto; /* 少し上に表示 */
+    padding: 20px 30px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 700px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+}
+.modal-content.modal-lg { 
+    max-width: 90vw; 
+    margin: 3% auto; /* さらに少し上に表示 */
+}
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.close-button:hover { color: #000; }
+#plot-container { width: 100%; height: 80vh; } /* 高さを調整 */
+#wordcloud-canvas { width: 100% !important; height: auto !important; }
+
+/* --- AI要約モーダル --- */
+.summary-controls { margin-bottom: 20px; }
+#ai-summary-output {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    min-height: 100px;
+    white-space: pre-wrap;
+}
+/* --- ★★★ ここまで追加 ★★★ --- */
